@@ -1,0 +1,10 @@
+*.class
+*.key
+.scout_fernet.key
+.payment_ledger.json
+__pycache__/
+*.pyc
+buffer_chunk.wav
+/tmp/
+.venv/
+venv/
