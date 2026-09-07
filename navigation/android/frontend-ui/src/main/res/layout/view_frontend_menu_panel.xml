@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="72dp"
+    android:paddingBottom="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#CC141C2D"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Route Command Center"
+            android:textColor="#E8EEFF"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+        <LinearLayout
+            android:id="@+id/routeActivePanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="#16243A"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/routeActiveTitleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Route Command Center"
+                android:textColor="#E8EEFF"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <AutoCompleteTextView
+                android:id="@+id/routeActionInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="#141C2D"
+                android:completionThreshold="0"
+                android:hint="Change route or Add stop: destination"
+                android:inputType="text"
+                android:padding="10dp"
+                android:textColor="#E8EEFF"
+                android:textColorHint="#9FB0CF" />
+
+            <TextView
+                android:id="@+id/routeStopsTitleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Current stops (drag to reorder)"
+                android:textColor="#E8EEFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/routeStopsEmptyText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="No stops yet. Use Add stop: &lt;destination&gt;."
+                android:textColor="#9FB0CF"
+                android:textSize="12sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/routeStopsRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="140dp"
+                android:layout_marginTop="6dp"
+                android:background="#101827"
+                android:padding="6dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/routeActionApplyBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:backgroundTint="#4F8CFF"
+                    android:text="Apply route action"
+                    android:textAllCaps="false" />
+
+                <Button
+                    android:id="@+id/routeClearBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="#B24646"
+                    android:text="Clear route"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/alertManagementToggleBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#141C2D"
+                android:text="Alert management ▼"
+                android:textAllCaps="false" />
+
+            <LinearLayout
+                android:id="@+id/alertManagementSubmenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/errorReportBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="#B24646"
+                    android:text="Report Error"
+                    android:textAllCaps="false" />
+
+                <TextView
+                    android:id="@+id/errorReportStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Error reports: idle"
+                    android:textColor="#9FB0CF"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/autoNotificationPermissionBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:backgroundTint="#141C2D"
+                    android:text="Android Auto notification permission"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+        </LinearLayout>
+
+
+        <EditText
+            android:id="@+id/baseUrlInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#141C2D"
+            android:hint="Backend URL (for example http://192.168.1.100:18080)"
+            android:inputType="textUri"
+            android:padding="10dp"
+            android:textColor="#E8EEFF"
+            android:textColorHint="#9FB0CF" />
+
+        <Button
+            android:id="@+id/serverSettingsBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#141C2D"
+            android:text="Server settings"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/privacySettingsBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#141C2D"
+            android:text="Location and analytics"
+            android:textAllCaps="false" />
+
+<Button
+            android:id="@+id/meshModeBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#1F6F4A"
+            android:text="Scout Mesh: Off"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/tailscaleModeBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#141C2D"
+            android:text="Lab Tailscale: Off"
+            android:textAllCaps="false" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/connectBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#4F8CFF"
+                android:text="Connect"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/disconnectBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#141C2D"
+                android:text="Disconnect"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/openMapsBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#4F8CFF"
+                android:text="Open in Maps"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/clearLogBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#141C2D"
+                android:text="Clear Log"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:id="@+id/stackToolsTitle"
+            android:text="@string/stack_tools_title"
+            android:textColor="#E8EEFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/stackStatusBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#141C2D"
+                android:text="@string/stack_action_status"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/stackHealthBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#141C2D"
+                android:text="@string/stack_action_health"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/stackStartBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#2E8B57"
+                android:text="@string/stack_action_start"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/stackRestartBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#4F8CFF"
+                android:text="@string/stack_action_restart"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/stackStopBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#B24646"
+                android:text="@string/stack_action_stop"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/stackManageStatusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/stack_status_idle"
+            android:textColor="#9FB0CF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="#CC141C2D"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/drivingModeText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Driving Mode: manual"
+            android:textColor="#9FB0CF"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/mapTargetText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="@string/map_target_none"
+            android:textColor="#9FB0CF"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/osmOdbNoticeText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:autoLink="web"
+            android:linksClickable="true"
+            android:text="Map data © OpenStreetMap contributors (ODbL 1.0). Dataset: https://planet.openstreetmap.org  License: https://opendatacommons.org/licenses/odbl/1-0/  This app reads OSM data in read-only mode and does not modify upstream OSM records."
+            android:textColor="#9FB0CF"
+            android:textColorLink="#4F8CFF"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="#CC141C2D"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Live Stream Log"
+            android:textColor="#E8EEFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/outputText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="#141C2D"
+            android:padding="10dp"
+            android:text="Waiting for stream events…"
+            android:textColor="#E8EEFF"
+            android:textIsSelectable="true"
+            android:textSize="13sp"
+            android:typeface="monospace" />
+    </LinearLayout>
+</LinearLayout>
