@@ -1,0 +1,151 @@
+plugins {
+    id("com.android.application")
+}
+def signingVariables = [
+    "SCOUT_KEYSTORE_PATH", "SCOUT_KEYSTORE_PASSWORD", "SCOUT_KEY_ALIAS", "SCOUT_KEY_PASSWORD"
+]
+def signingValues = signingVariables.collect { providers.environmentVariable(it).orNull }
+def hasReleaseSigning = signingValues.every { it != null && !it.isEmpty() }
+if (signingValues.any { it != null } && !hasReleaseSigning) {
+    throw new GradleException("Release signing requires all four SCOUT_KEYSTORE/KEY environment variables.")
+}
+
+android {
+    namespace "dev.warp.stream"
+    compileSdk 36
+    buildToolsVersion "36.0.0"
+    setProperty("archivesBaseName", "scout")
+
+    defaultConfig {
+        applicationId "io.github.scout_hazard_system.securemesh"
+        minSdk 26
+        targetSdk 36
+        versionCode 2
+        versionName "0.2.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "boolean", "ENABLE_DEV_CONTROLS", "false"
+        buildConfigField "boolean", "ALLOW_CLEARTEXT", "false"
+        buildConfigField "boolean", "ENABLE_LEGACY_MESH_ENROLLMENT", "false"
+        buildConfigField "boolean", "PREVIEW_BUILD", "false"
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        foss {
+            dimension "distribution"
+            applicationIdSuffix ".foss"
+            buildConfigField "boolean", "HAS_ANDROID_AUTO", "false"
+        }
+        play {
+            dimension "distribution"
+            buildConfigField "boolean", "HAS_ANDROID_AUTO", "true"
+        }
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(signingValues[0])
+                storePassword signingValues[1]
+                keyAlias signingValues[2]
+                keyPassword signingValues[3]
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            buildConfigField "boolean", "PREVIEW_BUILD", "true"
+            buildConfigField "boolean", "ALLOW_CLEARTEXT", "true"
+            buildConfigField "boolean", "ENABLE_DEV_CONTROLS",
+                providers.gradleProperty("scoutDevControls").orElse("false").get().toBoolean().toString()
+            buildConfigField "boolean", "ENABLE_LEGACY_MESH_ENROLLMENT",
+                providers.gradleProperty("scoutLabMesh").orElse("false").get().toBoolean().toString()
+        }
+        release {
+            debuggable false
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            // Without operator credentials release outputs remain unsigned, never debug-signed.
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+        preview {
+            initWith release
+            applicationIdSuffix ".preview"
+            versionNameSuffix "-preview"
+            debuggable false
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ["release"]
+            buildConfigField "boolean", "PREVIEW_BUILD", "true"
+        }
+    }
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    lint {
+        disable "MissingIntentFilterForMediaSearch", "MissingMediaBrowserServiceIntentFilter"
+    }
+    testOptions {
+        unitTests.includeAndroidResources = true
+    }
+
+    packaging {
+        jniLibs.useLegacyPackaging = false
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def unsignedSuffix = variant.buildType.name == "release" && !hasReleaseSigning ? "-unsigned" : ""
+            outputFileName = "scout-${variant.flavorName}-${variant.buildType.name}${unsignedSuffix}.apk"
+        }
+    }
+}
+
+tasks.register("verifyFossDependencies") {
+    doLast {
+        ["fossPreviewRuntimeClasspath", "fossReleaseRuntimeClasspath"].each { configurationName ->
+            def modules = configurations.getByName(configurationName)
+                .incoming.resolutionResult.allComponents.collect { it.id }.findAll {
+                    it instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier
+                }
+            def forbidden = modules.findAll {
+                def group = it.group
+                ["com.google.android.gms", "com.google.firebase", "com.android.billingclient",
+                    "com.google.android.play", "androidx.car"].any { prefix ->
+                    group == prefix || group.startsWith(prefix + ".")
+                }
+            }
+            if (!forbidden.isEmpty()) {
+                throw new GradleException("FOSS distribution contains forbidden dependencies: ${forbidden}")
+            }
+            logger.lifecycle("${configurationName}: checked ${modules.size()} runtime artifacts; no GMS, Firebase, Billing, Play Core, or Car App dependencies")
+        }
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
+    implementation project(":frontend-ui")
+    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "com.google.android.material:material:1.12.0"
+    implementation "androidx.core:core-ktx:1.13.1"
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+    playImplementation "androidx.car.app:app:1.4.0"
+    implementation "com.wireguard.android:tunnel:1.0.20260102"
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.robolectric:robolectric:4.16.1"
+    androidTestImplementation "androidx.test:runner:1.6.2"
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
+}

@@ -1,0 +1,17 @@
+# Local SDKs, build caches, and generated distributions
+.android-toolchain/
+**/.gradle/
+**/build/
+local.properties
+*.apk
+*.aab
+__pycache__/
+*.py[cod]
+
+# Signing and runtime secrets
+*.jks
+*.keystore
+keystore.properties
+stack/mesh/state/
+stack/mesh/peers/*.conf
+!stack/mesh/peers/.gitkeep
