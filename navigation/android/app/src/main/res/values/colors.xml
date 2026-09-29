@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_main">#0B1020</color>
+    <color name="bg_surface">#141C2D</color>
+    <color name="text_primary">#E8EEFF</color>
+    <color name="text_muted">#9FB0CF</color>
+    <color name="accent">#4F8CFF</color>
+    <color name="accent_dark">#2455C5</color>
+    <color name="chip_ok">#9FF7AE</color>
+    <color name="chip_warn">#FFD686</color>
+    <color name="bg_overlay">#F00E1626</color>
+    <color name="bg_chip">#CC141C2D</color>
+</resources>

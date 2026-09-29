@@ -1,10 +1,29 @@
+# Java / Backend
 *.class
 *.key
 .scout_fernet.key
 .payment_ledger.json
-__pycache__/
-*.pyc
 buffer_chunk.wav
 /tmp/
+
+# Python
+__pycache__/
+*.py[cod]
 .venv/
 venv/
+
+# Android SDKs, build caches, and generated distributions
+.android-toolchain/
+**/.gradle/
+**/build/
+local.properties
+*.apk
+*.aab
+
+# Signing and runtime secrets
+*.jks
+*.keystore
+keystore.properties
+stack/mesh/state/
+stack/mesh/peers/*.conf
+!stack/mesh/peers/.gitkeep

@@ -1,0 +1,46 @@
+# Proprietary map system: server\-side Java engine \+ 3D client renderer
+## Problem
+Replace dependence on osmdroid raster tiles with a proprietary map system that lives on the Java backend\. The server assimilates OpenStreetMap data \(roads, buildings, areas, POIs\) into its own model and disk cache and serves it to clients\. Coverage must be global \(cross\-country driving\), the primary data source is a planet\-scale database extract kept as light as possible on the server, Overpass remains a fallback, and map data storage is sharded per jurisdiction \(state\) mirroring the existing jurisdiction selector framework\. The Android app renders the data as a 3D navigation map \(extruded buildings, tilt/rotate/zoom\) at 20\-40 fps\.
+## Key design decisions
+* 20\-40 fps cannot be reached by streaming server\-rendered frames over HTTP \(~3\-8 fps at phone resolution\)\. Therefore: the map system \(data assimilation, storage, indexing, scene assembly, plus a raster render endpoint for verification/preview\) lives entirely on the server in Java; the phone runs a thin proprietary vector renderer that draws server\-provided geometry at frame rate\. No third\-party map SDK is involved in the 3D path\.
+* Lightest global extract \(researched\): the Protomaps planet basemap PMTiles build — a single ~137 GB planet file of OSM vector tiles \(z0\-15, MVT, ODbL\) that is never downloaded in full\. PMTiles v3 is designed for HTTP range reads: ~16 KB header\+root directory, then <=3 small range requests per tile \(~25 KB gzipped for a dense z15 tile\)\. The server stores only the tiles actually touched, giving global coverage at near\-zero resting weight\. Rejected as too heavy: Geofabrik state PBFs \(~12 GB CONUS \+ RAM\-heavy parsing\), OpenMapTiles planet \(not freely downloadable, SQLite dep\), VersaTiles \(brotli, not pure\-JDK\), Overture \(GeoParquet tooling\)\. Everything needed \(gzip, varints, Hilbert tile IDs, protobuf wire format for MVT\) is implementable with the plain JDK — verified end\-to\-end against a real build\.
+## Current state
+* Backend: single\-file, JDK\-only `frontend/java_backend/ScannerBackendServer.java` on :18080 with `registerContext` handler pattern; already proxies Nominatim geocoding and OSRM road routing, stores live GPS, streams pipeline events \(SSE\)\.
+* App: osmdroid MAPNIK raster base \+ OSRM route polyline \+ markers \+ scanner location popup\. OkHttp \+ org\.json in use; device is 720x1604\.
+* Build: `frontend/java_backend/build_executable.sh` compiles only `ScannerBackendServer.java` into `dist/scanner-backend-lite.jar`; `run_vehicle_stack.sh` uses that script\.
+* Verified: Overpass API reachable and returns way geometry \+ tags as JSON \(`out geom`\); Java 21 available\.
+* Verified against the live daily build `https://build.protomaps.com/20260727.pmtiles`: header \(magic/offsets\), internal \+ tile compression both gzip, tile type MVT, z0\-15, Accept\-Ranges honored; Hilbert tile\-ID directory lookup prototyped; the Anacortes z15 tile is 26 KB gz and decodes to layers `buildings` \(with height\), `roads` \(kind\_detail/ref/oneway\), `water`, `landuse`, `pois`, `earth`\.
+* Jurisdiction selector framework \(to mirror\): channel catalogs are sharded per state code via `regions`/`state_files` manifests \(channel\_selector\.py `load_channels`\), selected from lat/lon \+ reverse\-geocoded city/county/state \(`/api/platform/broadcastify/select`\)\.
+## Proposed changes
+### 1\. Planet extract source — new `frontend/java_backend/PlanetTileStore.java`
+* Pure\-JDK PMTiles v3 client: parses the 127\-byte header \+ gzip root directory \(cached in memory\), LRU of leaf directories, Hilbert z/x/y \-> tileId, and fetches tiles with HTTP `Range` requests \(env `PLANET_PMTILES_URL`, default pinned daily build; also accepts a local `.pmtiles` file path via RandomAccessFile for a fully offline planet/regional extract made with `pmtiles extract`\)\.
+* Pure\-JDK MVT decoder \(protobuf wire format\): decodes `roads`, `buildings`, `water`, `landuse`, `pois` layers into the proprietary model — roads \(class from kind/kind\_detail, name/ref, oneway, polyline\), buildings \(footprint, height m = height attr else 6\), areas \(park/water/lot/civic kinds\), POIs \(name, kind, point\)\. Web\-mercator tile coords \-> lat/lon\.
+* Jurisdiction\-sharded disk cache mirroring the selector framework: fetched tiles persist as `map_cache/shards/<STATE>/<z>_<x>_<y>.mvt.gz`, where STATE comes from an embedded state bounding\-box table \(tile center \-> state code, `XX` for offshore/unknown\)\. Raw gz tiles are the only stored artifact \(lightest weight\); parsing is on demand with an in\-memory LRU of parsed cells\.
+### 2\. Server map engine — new `frontend/java_backend/ProprietaryMapEngine.java`
+* Assimilation grid = the z15 tile grid \(~700x1200 m cells\)\. On request, cells covering the viewport load from the in\-memory LRU, else the shard disk cache, else the planet store \(one\-time fetch per cell, reused offline afterward\)\.
+* Overpass fallback preserved: if the planet source fails \(offline/URL down\), the cell is fetched from Overpass \(env `OVERPASS_API_URL`, 1 req/s throttle, single\-flight per cell, 60 s retry backoff\) using the same z15 tile bbox and persisted as normalized `cell_<z>_<x>_<y>.json` in the same shard directory\.
+* Shard prefetch for cross\-country driving: a background thread keeps the shard warm around the latest GPS fix \(3x3 z15 neighborhood\), and `GET /api/map/shard?state=WA` triggers an async bulk prefetch of a state's tile pyramid \(capped zoom\) using the same state\-code keying as the channel selector shards\.
+### 3\. Backend endpoints \(ScannerBackendServer\)
+* `GET /api/map/scene?lat&lon&radius_m` \-> compact JSON scene: center\-relative quantized coordinates, layered arrays \(areas, roads with class/name, buildings with heights, pois\), cell versions for client\-side caching\.
+* `GET /api/map/render?lat&lon&zoom&heading&tilt&w&h[&dest_lat&dest_lon]` \-> PNG rendered server\-side with Java2D \(painter's algorithm: areas \-> roads with class\-based widths/casings \-> depth\-sorted extruded buildings with wall shading \-> route \-> markers \-> labels \+ OSM attribution\)\. Used for engine verification, tests, and desktop preview\.
+* `GET /api/map/status` \-> per\-shard tile counts/bytes and source mix \(planet vs overpass\), planet store health, Overpass timing stats\.
+* `GET /api/map/shard?state=XX[&maxzoom=N]` \-> starts/reports async jurisdiction shard prefetch\.
+* Register handlers in `main()`, list new endpoints in `/api/mobile/bootstrap`\.
+* `build_executable.sh`: compile `*.java` instead of the single file \(javac output dir \+ jar packaging already handle extra classes\)\.
+### 4\. Android proprietary 3D renderer — new `Map3dView.java`
+* Custom View with Choreographer\-driven redraw; screen\-space projection cached and rebuilt only when the camera changes; smooth camera follow animates every vsync\. Target 20\-40\+ fps for a few thousand primitives \(fps measured and logged\)\.
+* 3D camera: zoom, heading rotation, perspective tilt \(0 = top\-down 2D, ~55 = 3D\)\. Buildings extruded and depth\-sorted with shaded walls; roads drawn with casing \+ fill by class; route polyline; device/destination markers; upright road\-name labels\.
+* Scene management: fetches `/api/map/scene` around the device asynchronously, refetches when the camera nears the loaded edge, keeps the last scene on network failure \(offline\-friendly since the server cache is local\)\.
+* Gestures: pinch zoom, drag pan \(pauses GPS follow\), two\-finger rotate; button cycles tilt 2D/3D\.
+### 5\. App wiring \(MainActivity, layout, strings\)
+* "Map: OSM / Map: 3D" toggle in quick controls swaps osmdroid view and `Map3dView` \(osmdroid retained as fallback/reference layer\)\.
+* `Map3dView` receives GPS fix \+ heading, destination target, and current OSRM route points from existing flows \(search \+ popup route flows unchanged\)\.
+### 6\. Validation
+* Backend: compile, restart stack, curl `scene`/`status` \(feature counts > 0 near a real location, source=planet\), `render` \(PNG magic bytes \+ visual check\), `shard` prefetch; extend `tests/test_gps_pipeline_integration.py` with map endpoint tests tolerant of the planet URL/Overpass being unreachable\.
+* App: `gradlew assembleDebug lintDebug`, adb install/launch, logcat fps \+ crash check, screenshots of the 3D map with extruded buildings and route\.
+* Commit and push after verification \(scoped staging; `Co-Authored-By: Oz <oz-agent@warp.dev>`\)\.
+## Risks and notes
+* Protomaps discourages hotlinking daily builds long\-term: URL pinned via `PLANET_PMTILES_URL` env; README documents pointing it at a self\-hosted copy or a local `pmtiles extract` file for permanent/offline use\. If the pinned build 404s, Overpass fallback keeps the engine functional\.
+* Overpass fair\-use limits: fallback only, throttled, small per\-cell queries; env override allows a self\-hosted instance later\.
+* ODbL compliance: rendered output and README carry "\(c\) OpenStreetMap contributors" attribution \(Protomaps basemap is an ODbL Produced Work of OSM\)\.
+* Child agents are not used: the feature is one tightly coupled contract \(engine <\-> scene API <\-> renderer\) and final verification is serial on the local device\.
